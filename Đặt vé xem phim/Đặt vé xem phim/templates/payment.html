@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Thanh toán - Đặt Vé Xem Phim{% endblock %}
+{% block content %}
+<main class="checkout-page">
+  <div class="checkout-head"><div><span class="eyebrow dark">CHECKOUT</span><h1>Thanh toán</h1><p>Hoàn tất thanh toán để nhận vé điện tử.</p></div><div class="checkout-id">Mã vé <b>{{ ticket.ticket_code or ('DVXP-' ~ '%06d'|format(ticket.id)) }}</b></div></div>
+  <div class="checkout-grid">
+    <section class="checkout-main">
+      {% if error %}<div class="error">{{ error }}</div>{% endif %}
+      {% if success %}<div class="success">{{ success }}</div>{% endif %}
+      <form method="post" id="paymentForm">
+        <div class="panel">
+          <div class="panel-title"><span>01</span><div><h2>Voucher giảm giá</h2><p>Nhập mã ưu đãi trước khi thanh toán.</p></div></div>
+          <div class="voucher-row"><input name="voucher_code" value="{{ ticket.voucher_code or '' }}" placeholder="Ví dụ: MOVIE10"><button class="btn btn-secondary" type="submit" name="action" value="apply_voucher">Áp dụng</button></div>
+          <div class="voucher-list">{% for code, item in vouchers.items() %}<button type="button" class="voucher-chip" onclick="setVoucher('{{ code }}')"><b>{{ code }}</b><span>{{ item.label }}</span></button>{% endfor %}</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title"><span>02</span><div><h2>Phương thức thanh toán</h2><p>Chọn một phương thức Demo.</p></div></div>
+          <label class="pay-option modern-option"><input type="radio" name="payment_method" value="QR Demo" onchange="togglePaymentFields()"><span class="method-icon">▦</span><span><b>Thanh toán bằng QR</b><small>Quét mã QR Demo</small></span><i>›</i></label>
+          <div id="qrBox" class="qr-box modern-pay" style="display:none;"><h3>📱 Quét mã QR</h3><img src="{{ url_for('static', filename='qr_demo.png') }}" alt="Mã QR thanh toán demo" class="qr-image"><p class="qr-amount">{{ '{:,}'.format(ticket.total) }}đ</p><small>QR Demo chỉ phục vụ học tập và kiểm thử.</small></div>
+
+          <label class="pay-option modern-option"><input type="radio" name="payment_method" value="Thẻ ngân hàng Demo" onchange="togglePaymentFields()"><span class="method-icon">💳</span><span><b>Thẻ ngân hàng Demo</b><small>Nhập thông tin thẻ giả</small></span><i>›</i></label>
+          <div id="cardBox" class="payment-fields modern-pay" style="display:none;"><h3>💳 Thông tin thẻ Demo</h3><div class="field-note">Chỉ dùng dữ liệu giả để kiểm thử.</div><label>Số thẻ Demo</label><input type="text" name="card_number" maxlength="19" placeholder="1234 5678 9012 3456"><label>Tên chủ thẻ Demo</label><input type="text" name="card_name" placeholder="NGUYEN VAN A"><div class="field-row"><div><label>Ngày hết hạn</label><input type="text" name="card_expiry" maxlength="5" placeholder="MM/YY"></div><div><label>Mã CVV Demo</label><input type="text" name="card_cvv" maxlength="4" placeholder="123"></div></div></div>
+
+          <label class="pay-option modern-option"><input type="radio" name="payment_method" value="Ví điện tử Demo" onchange="togglePaymentFields()"><span class="method-icon">👛</span><span><b>Ví điện tử Demo</b><small>Xác nhận bằng số điện thoại + mã Demo</small></span><i>›</i></label>
+          <div id="walletBox" class="payment-fields modern-pay" style="display:none;"><h3>👛 Thông tin ví Demo</h3><div class="field-note">Chỉ dùng dữ liệu giả để kiểm thử.</div><label>Số điện thoại ví Demo</label><input type="text" name="wallet_phone" maxlength="10" placeholder="0900000000"><label>Mã xác nhận Demo</label><input type="text" name="wallet_code" maxlength="6" placeholder="123456"></div>
+        </div>
+        <button class="btn btn-primary full pay-submit" type="submit" name="action" value="pay">🔒 Xác nhận thanh toán · {{ '{:,}'.format(ticket.total) }}đ</button>
+      </form>
+    </section>
+
+    <aside class="order-card">
+      <span class="eyebrow dark">ORDER SUMMARY</span><h2>Thông tin vé</h2>
+      <div class="order-movie"><div class="mini-poster">🎬</div><div><b>{{ ticket.ticket_name or ('Vé xem phim - ' ~ ticket.customer_name) }}</b><span>Ghế: {{ ticket.seats }}</span><span>Mã vé: {{ ticket.ticket_code or ('DVXP-' ~ '%06d'|format(ticket.id)) }}</span></div></div>
+      <div class="price-lines"><div><span>Tiền vé + combo</span><b>{{ '{:,}'.format(ticket.original_total or ticket.total) }}đ</b></div>{% if ticket.combo_items %}<div><span>🍿 {{ ticket.combo_items }}</span><b>{{ '{:,}'.format(ticket.combo_total or 0) }}đ</b></div>{% endif %}{% if ticket.discount %}<div class="discount-line"><span>Voucher {{ ticket.voucher_code }}</span><b>-{{ '{:,}'.format(ticket.discount) }}đ</b></div>{% endif %}<div class="grand"><span>Thanh toán</span><b>{{ '{:,}'.format(ticket.total) }}đ</b></div></div>
+      <div class="secure-note">🔐 Thanh toán Demo · Không giao dịch tiền thật</div>
+    </aside>
+  </div>
+</main>
+<script>
+function togglePaymentFields(){const s=document.querySelector('input[name="payment_method"]:checked');const m=s?s.value:'';document.getElementById('qrBox').style.display=m==='QR Demo'?'block':'none';document.getElementById('cardBox').style.display=m==='Thẻ ngân hàng Demo'?'block':'none';document.getElementById('walletBox').style.display=m==='Ví điện tử Demo'?'block':'none'}
+function setVoucher(code){document.querySelector('input[name="voucher_code"]').value=code}
+</script>
+{% endblock %}

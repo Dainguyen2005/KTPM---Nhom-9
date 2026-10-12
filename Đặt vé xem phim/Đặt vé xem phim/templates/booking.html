@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Chọn ghế - Đặt Vé Xem Phim{% endblock %}
+{% block content %}
+<main class="booking-page">
+  <div class="booking-top"><div><span class="eyebrow dark">SELECT YOUR SEAT</span><h1>{{ movie.title }}</h1><p>📍 {{ show.province }} · 🏢 {{ show.cinema }} · {{ show.room }} · 📅 {{ show.date }} · 🕐 {{ show.time }}</p></div></div>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="post" onsubmit="return prepareSeats()" class="booking-form">
+    <section class="booking-panel customer-panel"><div class="booking-section-title"><span>01</span><div><h2>Thông tin khách hàng</h2><p>Nhập thông tin để nhận vé điện tử.</p></div></div><div class="customer-grid"><div class="field-box"><label>Họ và tên</label><input name="customer_name" required value="{{ form_name or current_user or '' }}"></div><div class="field-box"><label>Số điện thoại</label><input name="phone" type="tel" required placeholder="0912345678" inputmode="numeric" autocomplete="tel" pattern="0[35789][0-9]{8}" minlength="10" maxlength="10" value="{{ form_phone or '' }}" title="Nhập số di động Việt Nam gồm 10 chữ số, bắt đầu bằng 03, 05, 07, 08 hoặc 09.">
+          <small class="field-hint">Nhập 10 chữ số, ví dụ 0912345678.</small></div></div></section>
+    <section class="booking-panel seat-panel">
+      <div class="booking-section-title"><span>02</span><div><h2>Chọn loại ghế</h2><p>Giá được tính theo từng loại ghế.</p></div></div>
+      <div class="seat-type-tabs"><button type="button" class="type-tab active" data-type="all" onclick="filterType('all',this)">Tất cả</button>{% for key,t in seat_types.items() %}<button type="button" class="type-tab" data-type="{{key}}" onclick="filterType('{{key}}',this)">{{t.label}} · {{'{:,}'.format(t.price)}}đ</button>{% endfor %}</div>
+      <div class="seat-legend"><div><i class="legend-seat single-demo"></i> Ghế đơn</div><div><i class="legend-seat double-demo"></i> Ghế đôi</div><div><i class="legend-seat vip-demo"></i> Ghế VIP</div><div><i class="legend-seat selected-demo"></i> Đang chọn</div><div><i class="legend-seat booked-demo"></i> Đã đặt</div></div>
+      <div class="screen"><span>MÀN HÌNH</span></div>
+      <div class="seat-map">
+      {% for row in 'ABCDEF' %}<div class="seat-row"><div class="row-label">{{row}}</div><div class="row-seats">{% for num in range(1,9) %}{% set seat=row~num %}{% set st=seat_type_map.get(seat,'single') %}{% set is_active=seat in seats %}<button type="button" class="seat seat-{{st}} {% if seat in booked %}booked{% endif %} {% if not is_active %}blocked{% endif %}" data-type="{{st}}" title="{{ seat }} · {{ seat_types[st]['label'] }} · {{ '{:,}'.format(seat_types[st]['price']) }}đ" {% if seat in booked or not is_active %}disabled{% endif %} onclick="toggleSeat(this,'{{seat}}')"><span class="seat-number">{{num}}</span><small>{{ 'Đôi' if st=='double' else 'VIP' if st=='vip' else 'Đơn' }}</small></button>{% endfor %}</div></div>{% endfor %}
+      </div>
+      <div class="seat-result"><span>Ghế đã chọn</span><b id="selectedText">Chưa chọn</b></div>
+      <section class="combo-section">
+        <div class="booking-section-title"><span>03</span><div><h2>Combo bắp nước</h2><p>Chọn thêm đồ ăn, thức uống cho suất phim.</p></div></div>
+        <div class="combo-grid">
+          {% for c in combos %}
+          <label class="combo-card">
+            <div class="combo-icon">🍿</div>
+            <div class="combo-info"><b>{{ c.name }}</b><small>{{ c.description }}</small><strong>{{ '{:,}'.format(c.price) }}đ</strong></div>
+            <input type="checkbox" name="combo_ids" value="{{ c.id }}" onchange="updateComboTotal()">
+          </label>
+          {% endfor %}
+        </div>
+        <div class="combo-summary"><span>Combo đã chọn</span><b id="comboText">Chưa chọn</b></div>
+      </section>
+      <section class="combo-section voucher-preview">
+        <div class="booking-section-title"><span>04</span><div><h2>Voucher đang có</h2><p>Voucher do Admin bật sẽ xuất hiện ngay tại đây.</p></div></div>
+        <div class="voucher-list">
+          {% for v in vouchers %}<span class="voucher-chip"><b>{{v.code}}</b><span>{{v.label}}</span></span>{% else %}<span class="empty-card">Hiện chưa có voucher đang bật.</span>{% endfor %}
+        </div>
+      </section>
+      <div class="booking-bottom"><div><span>Tạm tính</span><strong id="seatTotal">0đ</strong></div><button class="btn btn-primary booking-submit" type="submit">Tiếp tục thanh toán <span>→</span></button></div>
+    </section><input type="hidden" name="seats" id="selectedSeats">
+  </form>
+</main>
+<script>
+const PRICES={single:{{seat_types['single']['price']}},double:{{seat_types['double']['price']}},vip:{{seat_types['vip']['price']}}}; let selected=[];
+function filterType(type,btn){document.querySelectorAll('.type-tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.seat').forEach(s=>{s.style.display=(type==='all'||s.dataset.type===type)?'inline-flex':'none'})}
+function toggleSeat(b,s){if(b.classList.contains('selected')){b.classList.remove('selected');selected=selected.filter(x=>x.code!==s)}else{selected.push({code:s,type:b.dataset.type});b.classList.add('selected')}selected.sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true}));document.getElementById('selectedText').textContent=selected.length?selected.map(x=>x.code+' ('+(x.type==='single'?'đơn':x.type==='double'?'đôi':'VIP')+')').join(', '):'Chưa chọn';document.getElementById('seatTotal').textContent=selected.reduce((sum,x)=>sum+PRICES[x.type],0).toLocaleString('vi-VN')+'đ'}
+function updateComboTotal(){const chosen=[...document.querySelectorAll('input[name=combo_ids]:checked')];const total=chosen.reduce((sum,x)=>sum+Number(x.parentElement.querySelector('strong').textContent.replace(/\D/g,'')),0);document.getElementById('comboText').textContent=chosen.length?chosen.map(x=>x.parentElement.querySelector('b').textContent).join(', ')+' · '+total.toLocaleString('vi-VN')+'đ':'Chưa chọn'}
+function prepareSeats(){if(!selected.length){alert('Vui lòng chọn ít nhất một ghế.');return false}document.getElementById('selectedSeats').value=selected.map(x=>x.code).join(',');return true}
+</script>{% endblock %}

@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block title %}Quản lý suất chiếu{% endblock %}
+{% block content %}
+<main class="admin-page">
+  <div class="admin-nav">
+    <a href="/admin/">Tổng quan</a>
+    <a href="/admin/movies">Phim</a>
+    <a class="active" href="/admin/showtimes">Suất chiếu</a>
+    <a href="/admin/vouchers">Voucher</a>
+    <a href="/admin/rooms">Phòng & Giá</a>
+    <a href="/admin/combos">Combo</a>
+    <a href="/admin/tickets">Vé</a>
+    <a href="/admin/users">Người dùng</a>
+  </div>
+
+  <section class="admin-card">
+    {% if edit_showtime %}
+      <h2>Sửa suất chiếu #{{ edit_showtime.id }}</h2>
+    {% else %}
+      <h2>Thêm suất chiếu</h2>
+    {% endif %}
+
+    <form class="admin-form showtime-admin-form" method="post">
+      <input type="hidden" name="id" value="{% if edit_showtime %}{{ edit_showtime.id }}{% endif %}">
+
+      <div class="admin-field">
+        <label for="movieSelect">Phim</label>
+        <select id="movieSelect" name="movie_id" required>
+          {% for m in movies %}
+            <option value="{{ m.id }}" {% if edit_showtime and edit_showtime.movie_id == m.id %}selected{% endif %}>{{ m.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="admin-field">
+        <label for="provinceInput">Tỉnh / thành</label>
+        <input name="province" id="provinceInput" placeholder="Tỉnh / thành" value="{% if edit_showtime %}{{ edit_showtime.province }}{% else %}Hà Nội{% endif %}" required>
+      </div>
+
+      <div class="admin-field">
+        <label for="cinemaInput">Rạp</label>
+        <input name="cinema" id="cinemaInput" placeholder="Tên rạp" value="{% if edit_showtime %}{{ edit_showtime.cinema }}{% endif %}" required>
+      </div>
+
+      <div class="admin-field">
+        <label for="dateInput">Ngày chiếu</label>
+        <input id="dateInput" name="date" type="date" value="{% if edit_showtime %}{{ edit_showtime.date }}{% endif %}" required>
+      </div>
+
+      <div class="admin-field">
+        <label for="timeInput">Giờ chiếu</label>
+        <input id="timeInput" name="time" type="time" value="{% if edit_showtime %}{{ edit_showtime.time }}{% endif %}" required>
+      </div>
+
+      <div class="admin-field">
+        <label for="roomSelect">Phòng</label>
+        <select name="room" id="roomSelect" required onchange="syncRoom()">
+          {% for r in rooms %}
+            <option value="{{ r.name }}" data-province="{{ r.province }}" data-cinema="{{ r.cinema }}" {% if edit_showtime and edit_showtime.room == r.name and edit_showtime.cinema == r.cinema %}selected{% endif %}>
+              {{ r.province }} · {{ r.cinema }} · {{ r.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="admin-field">
+        <label for="formatSelect">Định dạng</label>
+        <select id="formatSelect" name="format">
+          <option value="2D" {% if not edit_showtime or edit_showtime.format == '2D' %}selected{% endif %}>2D</option>
+          <option value="3D" {% if edit_showtime and edit_showtime.format == '3D' %}selected{% endif %}>3D</option>
+        </select>
+      </div>
+
+      <div class="admin-field">
+        <label for="priceInput">Giá cơ bản (đ)</label>
+        <input id="priceInput" name="price" type="number" value="{% if edit_showtime %}{{ edit_showtime.price }}{% else %}90000{% endif %}" min="0">
+      </div>
+
+      <div class="admin-field">
+        <label for="singlePriceInput">Giá ghế đơn (đ)</label>
+        <input id="singlePriceInput" name="single_price" type="number" value="{% if edit_showtime %}{{ edit_showtime.single_price }}{% else %}90000{% endif %}" min="0">
+      </div>
+
+      <div class="admin-field">
+        <label for="doublePriceInput">Giá ghế đôi (đ)</label>
+        <input id="doublePriceInput" name="double_price" type="number" value="{% if edit_showtime %}{{ edit_showtime.double_price }}{% else %}150000{% endif %}" min="0">
+      </div>
+
+      <div class="admin-field">
+        <label for="vipPriceInput">Giá ghế VIP (đ)</label>
+        <input id="vipPriceInput" name="vip_price" type="number" value="{% if edit_showtime %}{{ edit_showtime.vip_price }}{% else %}120000{% endif %}" min="0">
+      </div>
+
+      <div class="admin-form-actions">
+        {% if edit_showtime %}
+          <button class="btn btn-primary" type="submit">Lưu thay đổi</button>
+          <a class="btn btn-secondary" href="/admin/showtimes">Hủy sửa</a>
+        {% else %}
+          <button class="btn btn-primary" type="submit">Thêm suất</button>
+        {% endif %}
+      </div>
+    </form>
+  </section>
+
+  <section class="admin-card">
+    <h2>Lịch chiếu</h2>
+    <div class="admin-table">
+      {% for s in showtimes %}
+        <div class="tr">
+          <span>#{{ s.id }}</span>
+          <span>
+            <b>{{ s.movie_title }}</b>
+            <small>📍 {{ s.province }} · {{ s.cinema }} · {{ s.date }} · {{ s.time }} · {{ s.room }}</small>
+          </span>
+          <span>
+            {{ s.format }}<br>
+            Đơn {{ "{:,}".format(s.single_price) }}đ ·
+            Đôi {{ "{:,}".format(s.double_price) }}đ ·
+            VIP {{ "{:,}".format(s.vip_price) }}đ
+          </span>
+          <span>
+            <a class="btn btn-secondary" href="/admin/showtimes?edit={{ s.id }}">Sửa</a>
+            <form method="post" action="/admin/showtimes/delete/{{ s.id }}" style="display:inline">
+              <button class="btn btn-danger" type="submit"
+                      onclick="return confirm('Bạn có chắc muốn xóa suất chiếu này?')">Xóa</button>
+            </form>
+          </span>
+        </div>
+      {% else %}
+        <div class="empty-card">Chưa có suất chiếu.</div>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+
+<script>
+function syncRoom() {
+  const select = document.getElementById("roomSelect");
+  const option = select ? select.options[select.selectedIndex] : null;
+  if (!option) return;
+
+  const province = document.getElementById("provinceInput");
+  const cinema = document.getElementById("cinemaInput");
+
+  if (province && option.dataset.province) {
+    province.value = option.dataset.province;
+  }
+  if (cinema && option.dataset.cinema) {
+    cinema.value = option.dataset.cinema;
+  }
+}
+</script>
+{% endblock %}

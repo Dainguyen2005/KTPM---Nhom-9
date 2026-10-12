@@ -1,0 +1,84 @@
+<!doctype html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{% block title %}Đặt Vé Xem Phim{% endblock %}</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"></head><body>
+<header class="site-header"><a class="brand" href="/"><span class="brand-icon">🎬</span><span>Đặt Vé Xem Phim</span></a><nav><a href="/">Trang chủ</a><a href="/showtimes">Lịch chiếu</a><a href="/booking">🎟 Đặt vé</a><a href="/cinemas">Rạp</a><a href="/promotions">Khuyến mãi</a>{% if current_user %}<a href="/tickets">🎟 Vé của tôi</a><span class="hello">Xin chào, {{current_user}}</span>{% if is_admin %}<a class="admin-link" href="/admin">⚙ Admin</a>{% endif %}<a class="nav-outline" href="/logout">Đăng xuất</a>{% else %}<a href="/login">Đăng nhập</a><a class="nav-cta" href="/register">Đăng ký</a>{% endif %}</nav></header>
+{% block content %}{% endblock %}<footer class="footer">🎬 Đặt Vé Xem Phim · Website demo phục vụ học tập và kiểm thử</footer>
+<button type="button" class="chat-button" id="chatOpen" aria-label="Mở trợ lý chatbot">💬</button>
+<section class="chat-box hidden" id="chatBox" aria-label="Trợ lý Đặt Vé Xem Phim">
+  <div class="chat-header"><div><b>🎬 Trợ lý đặt vé</b><div style="font-size:11px;opacity:.8">Hỏi về phim, rạp, vé và lịch chiếu</div></div><button type="button" id="chatClose" aria-label="Đóng chatbot" style="background:transparent;border:0;color:white;font-size:20px;cursor:pointer">×</button></div>
+  <div class="chat-messages" id="chatMessages" aria-live="polite"><div class="bot">Xin chào! Mình có thể tra cứu phim, lịch chiếu, rạp, giá vé, khuyến mãi, combo và vé của tài khoản bạn. Bạn muốn hỏi gì?</div></div>
+  <div class="chat-suggestions"><button type="button" data-chat="Phim đang chiếu">Phim đang chiếu</button><button type="button" data-chat="Giá ghế VIP bao nhiêu?">Giá vé</button><button type="button" data-chat="Mã vé của tôi">Vé của tôi</button></div>
+  <form class="chat-input" id="chatForm"><input id="chatText" autocomplete="off" maxlength="500" placeholder="Nhập câu hỏi..." aria-label="Nhập câu hỏi" required><button type="submit">Gửi</button></form>
+</section>
+<script>
+(function(){
+  const KEY='movie_booking_tab_token';
+  let token=sessionStorage.getItem(KEY);
+  if(!token){
+    const bytes=new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    token=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+    sessionStorage.setItem(KEY,token);
+  }
+  const url=new URL(window.location.href);
+  if(!url.searchParams.get('tab_token')){
+    url.searchParams.set('tab_token',token);
+    history.replaceState(null,'',url.toString());
+  }
+  function decorate(){
+    document.querySelectorAll('a[href]').forEach(a=>{
+      const raw=a.getAttribute('href');
+      if(!raw || raw.startsWith('#') || raw.startsWith('javascript:') || raw.startsWith('mailto:') || raw.startsWith('tel:')) return;
+      try{
+        const u=new URL(raw,window.location.origin);
+        if(u.origin!==window.location.origin) return;
+        u.searchParams.set('tab_token',token);
+        a.setAttribute('href',u.pathname+u.search+u.hash);
+      }catch(e){}
+    });
+    document.querySelectorAll('form').forEach(form=>{
+      let input=form.querySelector('input[name="tab_token"]');
+      if(!input){
+        input=document.createElement('input');
+        input.type='hidden'; input.name='tab_token'; form.appendChild(input);
+      }
+      input.value=token;
+    });
+  }
+  decorate();
+  new MutationObserver(decorate).observe(document.body,{childList:true,subtree:true});
+})();
+(function(){
+  const box=document.getElementById('chatBox'), open=document.getElementById('chatOpen'), close=document.getElementById('chatClose');
+  const form=document.getElementById('chatForm'), input=document.getElementById('chatText'), messages=document.getElementById('chatMessages');
+  if(!box||!open||!form)return;
+  open.addEventListener('click',()=>{box.classList.toggle('hidden');if(!box.classList.contains('hidden'))input.focus();});
+  close.addEventListener('click',()=>box.classList.add('hidden'));
+  function addMessage(text,cls,isHtml){
+    const el=document.createElement('div');el.className=cls;
+    if(!isHtml){el.textContent=text;}
+    else {
+      const parsed=new DOMParser().parseFromString(text,'text/html');
+      function copySafe(source,target){Array.from(source.childNodes).forEach(node=>{
+        if(node.nodeType===Node.TEXT_NODE){target.appendChild(document.createTextNode(node.nodeValue));return;}
+        if(node.nodeType!==Node.ELEMENT_NODE)return;
+        const tag=node.tagName.toLowerCase();
+        if(tag==='br'){target.appendChild(document.createElement('br'));return;}
+        if(tag==='b'||tag==='strong'){const b=document.createElement('b');copySafe(node,b);target.appendChild(b);return;}
+        if(tag==='a') {const href=node.getAttribute('href')||''; if(href.startsWith('/')&&!href.startsWith('//')){const a=document.createElement('a');a.href=href;a.style.color='#6046d8';a.style.fontWeight='700';copySafe(node,a);target.appendChild(a);return;}}
+        copySafe(node,target);
+      });}
+      copySafe(parsed.body,el);
+      el.style.whiteSpace='pre-line';
+    }
+    messages.appendChild(el);messages.scrollTop=messages.scrollHeight;return el;
+  }
+  async function send(text){text=(text||'').trim();if(!text)return;addMessage(text,'user',false);input.value='';input.disabled=true;
+    const wait=addMessage('Đang tra cứu...','bot',false);
+    try{const u=new URL('/api/chatbot',window.location.origin);const token=sessionStorage.getItem('movie_booking_tab_token');if(token)u.searchParams.set('tab_token',token);
+      const response=await fetch(u.toString(),{method:'POST',headers:{'Content-Type':'application/json','X-Tab-Token':token||''},body:JSON.stringify({message:text})});
+      const data=await response.json();wait.remove();addMessage(data.answer||'Mình chưa có câu trả lời cho câu hỏi này.','bot',true);
+    }catch(e){wait.textContent='Không kết nối được chatbot. Bạn thử lại nhé.';}finally{input.disabled=false;input.focus();}
+  }
+  form.addEventListener('submit',e=>{e.preventDefault();send(input.value);});
+  document.querySelectorAll('[data-chat]').forEach(btn=>btn.addEventListener('click',()=>send(btn.getAttribute('data-chat'))));
+})();
+</script></body></html>

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Đăng ký - Đặt Vé Xem Phim{% endblock %}
+{% block content %}
+<main class="auth-page"><div class="auth-card">
+  <div class="auth-top"><div class="auth-icon">✨</div><span class="eyebrow dark">CREATE ACCOUNT</span><h1>Tạo tài khoản</h1><p>Đăng ký để lưu vé và đặt phim nhanh hơn.</p></div>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="post">
+    <label>Họ tên</label><input name="name" placeholder="Nguyễn Văn A" required>
+    <label>Email</label><input type="email" name="email" placeholder="you@example.com" required>
+    <label>Mật khẩu</label><input type="password" name="password" placeholder="Ít nhất 6 ký tự" required>
+    <label>Nhập lại mật khẩu</label><input type="password" name="confirm_password" placeholder="Nhập lại mật khẩu" required>
+    <button class="btn btn-primary full" type="submit">Tạo tài khoản →</button>
+  </form>
+  <p class="auth-bottom">Đã có tài khoản? <a href="/login">Đăng nhập</a></p>
+</div></main>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Đăng nhập - Đặt Vé Xem Phim{% endblock %}
+{% block content %}
+<main class="auth-page"><div class="auth-card">
+  <div class="auth-top"><div class="auth-icon">🎬</div><span class="eyebrow dark">WELCOME BACK</span><h1>Chào mừng trở lại</h1><p>Đăng nhập để tiếp tục đặt vé.</p></div>
+  {% if registered %}<div class="success">Đăng ký thành công. Hãy đăng nhập.</div>{% endif %}
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <a class="google-btn" href="/login/google"><span class="google-g">G</span> Tiếp tục với Google <small>Demo</small></a>
+  <div class="divider"><span>hoặc đăng nhập bằng email</span></div>
+  <form method="post">
+    <label>Email</label><input type="email" name="email" placeholder="you@example.com" required>
+    <div class="label-row"><label>Mật khẩu</label><a href="/forgot-password">Quên mật khẩu?</a></div>
+    <input type="password" name="password" placeholder="••••••••" required>
+    <button class="btn btn-primary full" type="submit">Đăng nhập →</button>
+  </form>
+  <p class="auth-bottom">Chưa có tài khoản? <a href="/register">Tạo tài khoản</a></p>
+  <p class="demo-hint">Nút Google là luồng Demo phục vụ học tập. Đăng nhập Google thật cần cấu hình OAuth.</p>
+</div></main>
+{% endblock %}
